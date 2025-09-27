@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: Weather Aggregation API
+  version: 1.0.0
+  description: |
+    Aggregates weather information from Open-Meteo and MET Norway, normalizing current
+    conditions and forecast data.
+servers:
+  - url: http://localhost:8080
+paths:
+  /weather/current:
+    get:
+      summary: Get current weather
+      description: Fetches current conditions for a resolved location.
+      parameters:
+        - name: location
+          in: query
+          description: City name to resolve
+          required: false
+          schema:
+            type: string
+        - name: lat
+          in: query
+          description: Latitude coordinate
+          required: false
+          schema:
+            type: number
+        - name: lon
+          in: query
+          description: Longitude coordinate
+          required: false
+          schema:
+            type: number
+        - name: units
+          in: query
+          schema:
+            type: string
+            enum: [metric, imperial]
+            default: metric
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [en, hi]
+            default: en
+      responses:
+        '200':
+          description: Normalized weather payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentWeatherResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /weather/forecast:
+    get:
+      summary: Get daily forecast
+      description: Returns up to 7 days of normalized forecast data.
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: lat
+          in: query
+          schema:
+            type: number
+        - name: lon
+          in: query
+          schema:
+            type: number
+        - name: units
+          in: query
+          schema:
+            type: string
+            enum: [metric, imperial]
+            default: metric
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [en, hi]
+            default: en
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 7
+            default: 7
+      responses:
+        '200':
+          description: Forecast payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /locations/search:
+    get:
+      summary: Search for locations
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [en, hi]
+            default: en
+      responses:
+        '200':
+          description: Matching locations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
+  /health:
+    get:
+      summary: Health probe
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Enabled when `METRICS_ENABLED=true`.
+      responses:
+        '200':
+          description: Prometheus-formatted metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Metrics disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  responses:
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Location not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Location:
+      type: object
+      properties:
+        name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        country:
+          type: string
+        timezone:
+          type: string
+    CurrentWeatherResponse:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        current:
+          type: object
+          properties:
+            tempC:
+              type: number
+              nullable: true
+            humidity:
+              type: number
+              nullable: true
+            windKph:
+              type: number
+              nullable: true
+            condition:
+              type: string
+              nullable: true
+            fetchedAtISO:
+              type: string
+              format: date-time
+            warnings:
+              type: array
+              items:
+                type: string
+            sourceBreakdown:
+              type: array
+              items:
+                type: object
+                properties:
+                  source:
+                    type: string
+                  tempC:
+                    type: number
+                    nullable: true
+                  humidity:
+                    type: number
+                    nullable: true
+                  windKph:
+                    type: number
+                    nullable: true
+                  condition:
+                    type: string
+                    nullable: true
+        warnings:
+          type: array
+          items:
+            type: string
+    ForecastResponse:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        forecast:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              minC:
+                type: number
+                nullable: true
+              maxC:
+                type: number
+                nullable: true
+              pop:
+                type: number
+                nullable: true
+              summary:
+                type: string
+                nullable: true
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+        traceId:
+          type: string
+          nullable: true
