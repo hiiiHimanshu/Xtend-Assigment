@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Personal Finance Management</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Framer Motion for animations -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-indigo-600">
+                            <i class="fas fa-wallet mr-2"></i>ExpenseTracker
+                        </h1>
+                    </div>
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-4">
+                            <button onclick="showSection('dashboard')" class="nav-link active" data-section="dashboard">
+                                <i class="fas fa-chart-pie mr-1"></i> Dashboard
+                            </button>
+                            <button onclick="showSection('expenses')" class="nav-link" data-section="expenses">
+                                <i class="fas fa-list mr-1"></i> Expenses
+                            </button>
+                            <button onclick="showSection('categories')" class="nav-link" data-section="categories">
+                                <i class="fas fa-tags mr-1"></i> Categories
+                            </button>
+                            <button onclick="showSection('analytics')" class="nav-link" data-section="analytics">
+                                <i class="fas fa-chart-line mr-1"></i> Analytics
+                            </button>
+                            <button onclick="showSection('import-export')" class="nav-link" data-section="import-export">
+                                <i class="fas fa-file-import mr-1"></i> Import/Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="user-info hidden">
+                        <span class="text-gray-700">Welcome, <span id="username"></span></span>
+                    </div>
+                    <button id="loginBtn" onclick="showLoginModal()" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt mr-1"></i> Login
+                    </button>
+                    <button id="logoutBtn" onclick="logout()" class="btn btn-secondary hidden">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div class="md:hidden mobile-menu hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-white border-t">
+                <button onclick="showSection('dashboard')" class="mobile-nav-link active" data-section="dashboard">
+                    <i class="fas fa-chart-pie mr-2"></i> Dashboard
+                </button>
+                <button onclick="showSection('expenses')" class="mobile-nav-link" data-section="expenses">
+                    <i class="fas fa-list mr-2"></i> Expenses
+                </button>
+                <button onclick="showSection('categories')" class="mobile-nav-link" data-section="categories">
+                    <i class="fas fa-tags mr-2"></i> Categories
+                </button>
+                <button onclick="showSection('analytics')" class="mobile-nav-link" data-section="analytics">
+                    <i class="fas fa-chart-line mr-2"></i> Analytics
+                </button>
+                <button onclick="showSection('import-export')" class="mobile-nav-link" data-section="import-export">
+                    <i class="fas fa-file-import mr-2"></i> Import/Export
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-4 rounded-lg flex items-center space-x-3">
+                <div class="spinner"></div>
+                <span>Loading...</span>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer" class="mb-4"></div>
+
+        <!-- Authentication Required Message -->
+        <div id="authRequired" class="text-center py-12">
+            <i class="fas fa-lock text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">Authentication Required</h2>
+            <p class="text-gray-500 mb-4">Please log in to access your expense tracker.</p>
+            <button onclick="showLoginModal()" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt mr-1"></i> Login
+            </button>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="content-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stats-card">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-500 bg-opacity-75">
+                            <i class="fas fa-dollar-sign text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Total Spent</p>
+                            <p class="text-2xl font-bold text-gray-900" id="totalSpent">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-500 bg-opacity-75">
+                            <i class="fas fa-receipt text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Total Expenses</p>
+                            <p class="text-2xl font-bold text-gray-900" id="totalExpenses">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-500 bg-opacity-75">
+                            <i class="fas fa-chart-line text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Monthly Avg</p>
+                            <p class="text-2xl font-bold text-gray-900" id="avgAmount">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-purple-500 bg-opacity-75">
+                            <i class="fas fa-calendar-month text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">This Month</p>
+                            <p class="text-2xl font-bold text-gray-900" id="monthlyAmount">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-2"></i>Category Breakdown
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="categoryChart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line mr-2"></i>Monthly Trend
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="monthlyChart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-trophy mr-2"></i>Recent Expenses
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div id="recentExpenses" class="space-y-4">
+                        <!-- Recent expenses will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses Section -->
+        <div id="expenses-section" class="content-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-list mr-2"></i>Expenses
+                </h2>
+                <button onclick="showAddExpenseModal()" class="btn btn-primary">
+                    <i class="fas fa-plus mr-1"></i> Add Expense
+                </button>
+            </div>
+
+            <!-- Expense Filters -->
+            <div class="card mb-6">
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="form-label">Category</label>
+                            <select id="filterCategory" class="form-select">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Start Date</label>
+                            <input type="date" id="filterStartDate" class="form-input">
+                        </div>
+                        <div>
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="filterEndDate" class="form-input">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="filterExpenses()" class="btn btn-secondary w-full">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenses List -->
+            <div class="card">
+                <div class="card-body">
+                    <div id="expensesList">
+                        <!-- Expenses will be loaded here -->
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="expensesPagination" class="mt-6 flex justify-center">
+                        <!-- Pagination will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Section -->
+        <div id="categories-section" class="content-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-tags mr-2"></i>Categories
+                </h2>
+                <button onclick="showAddCategoryModal()" class="btn btn-primary">
+                    <i class="fas fa-plus mr-1"></i> Add Category
+                </button>
+            </div>
+
+            <div id="categoriesList">
+                <!-- Categories will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="content-section hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                <i class="fas fa-chart-line mr-2"></i>Analytics
+            </h2>
+
+            <!-- Date Range Selector -->
+            <div class="card mb-6">
+                <div class="card-body">
+                    <div class="flex items-center space-x-4">
+                        <div>
+                            <label class="form-label">Start Date</label>
+                            <input type="date" id="analyticsStartDate" class="form-input">
+                        </div>
+                        <div>
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="analyticsEndDate" class="form-input">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="loadAnalytics()" class="btn btn-primary">
+                                <i class="fas fa-chart-bar mr-1"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Spending by Category</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="analyticsCategory" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Payment Methods</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="analyticsPayment" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Daily Spending Trend</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="analyticsTrend" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Top Expenses</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="topExpensesList">
+                            <!-- Top expenses will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import/Export Section -->
+        <div id="import-export-section" class="content-section hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                <i class="fas fa-file-import mr-2"></i>Import/Export Data
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-upload mr-2"></i>Import Expenses
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-gray-600 mb-4">Upload a CSV file with your expense data.</p>
+                        <div class="mb-4">
+                            <input type="file" id="csvImport" accept=".csv" class="form-input">
+                        </div>
+                        <button onclick="importCSV()" class="btn btn-primary w-full">
+                            <i class="fas fa-upload mr-1"></i> Import CSV
+                        </button>
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-500">Expected CSV format:</p>
+                            <code class="text-xs bg-gray-100 p-2 block mt-1 rounded">
+                                amount,description,date,category,payment_method,tags,notes
+                            </code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-download mr-2"></i>Export Expenses
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-gray-600 mb-4">Download your expense data as CSV.</p>
+                        <div class="space-y-3">
+                            <button onclick="exportCSV('all')" class="btn btn-secondary w-full">
+                                <i class="fas fa-download mr-1"></i> Export All Expenses
+                            </button>
+                            <button onclick="exportCSV('month')" class="btn btn-secondary w-full">
+                                <i class="fas fa-download mr-1"></i> Export This Month
+                            </button>
+                            <button onclick="exportCSV('year')" class="btn btn-secondary w-full">
+                                <i class="fas fa-download mr-1"></i> Export This Year
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </h3>
+                <button onclick="hideLoginModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="loginForm" onsubmit="login(event)">
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="loginEmail" class="form-input" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="loginPassword" class="form-input" required>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600">
+                            Don't have an account? 
+                            <button type="button" onclick="showRegisterModal()" class="text-indigo-600 hover:text-indigo-500">
+                                Register here
+                            </button>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="hideLoginModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-user-plus mr-2"></i>Register
+                </h3>
+                <button onclick="hideRegisterModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="registerForm" onsubmit="register(event)">
+                <div class="modal-body">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="form-label">First Name</label>
+                            <input type="text" id="registerFirstName" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Last Name</label>
+                            <input type="text" id="registerLastName" class="form-input" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="registerUsername" class="form-input" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="registerEmail" class="form-input" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="registerPassword" class="form-input" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="hideRegisterModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Expense Modal -->
+    <div id="expenseModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="expenseModalTitle">
+                    <i class="fas fa-plus mr-2"></i>Add Expense
+                </h3>
+                <button onclick="hideExpenseModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="expenseForm" onsubmit="saveExpense(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="expenseId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="form-label">Amount *</label>
+                            <input type="number" id="expenseAmount" step="0.01" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Category *</label>
+                            <select id="expenseCategory" class="form-select" required>
+                                <option value="">Select Category</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Description *</label>
+                        <input type="text" id="expenseDescription" class="form-input" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="form-label">Date *</label>
+                            <input type="date" id="expenseDate" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Payment Method</label>
+                            <select id="expensePaymentMethod" class="form-select">
+                                <option value="cash">Cash</option>
+                                <option value="credit_card">Credit Card</option>
+                                <option value="debit_card">Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Tags (comma-separated)</label>
+                        <input type="text" id="expenseTags" class="form-input" placeholder="e.g. lunch, business, weekend">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Notes</label>
+                        <textarea id="expenseNotes" class="form-input" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="hideExpenseModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Category Modal -->
+    <div id="categoryModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="categoryModalTitle">
+                    <i class="fas fa-plus mr-2"></i>Add Category
+                </h3>
+                <button onclick="hideCategoryModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="categoryForm" onsubmit="saveCategory(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="categoryId">
+                    <div class="mb-4">
+                        <label class="form-label">Name *</label>
+                        <input type="text" id="categoryName" class="form-input" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Description</label>
+                        <textarea id="categoryDescription" class="form-input" rows="2"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="form-label">Parent Category</label>
+                            <select id="categoryParent" class="form-select">
+                                <option value="">None (Root Category)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Color</label>
+                            <input type="color" id="categoryColor" class="form-input" value="#6366f1">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Icon</label>
+                        <select id="categoryIcon" class="form-select">
+                            <option value="folder">📁 Folder</option>
+                            <option value="utensils">🍽️ Food</option>
+                            <option value="car">🚗 Transportation</option>
+                            <option value="home">🏠 Home</option>
+                            <option value="shopping-bag">🛍️ Shopping</option>
+                            <option value="heart">❤️ Health</option>
+                            <option value="book">📚 Education</option>
+                            <option value="film">🎬 Entertainment</option>
+                            <option value="plane">✈️ Travel</option>
+                            <option value="receipt">🧾 Bills</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="hideCategoryModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/expenses.js"></script>
+    <script src="js/categories.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/import-export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

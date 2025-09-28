@@ -1,0 +1,4 @@
+amount,description,date,category,payment_method,tags,notes
+23.45,Coffee meetup,2025-09-01,Social,cash,coffee;friends,Morning catch-up
+120.00,Grocery run,2025-09-02,Groceries,debit_card,groceries;weekly,Bought essentials
+45.99,Online course,2025-09-05,Learning,credit_card,education;skills,Enrolled in webinar
